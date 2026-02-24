@@ -9,3 +9,4 @@ obj/
 
 # Build
 *.log
+/FinanceTracker.Api/appsettings.json
