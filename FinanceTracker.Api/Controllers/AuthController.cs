@@ -3,6 +3,7 @@ using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure;
 using FinanceTracker.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -24,9 +25,12 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto)
     {
-        var hash = PasswordHasher.Hash(dto.Password);
+        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+            return BadRequest("Email already exists.");
 
+        var hash = PasswordHasher.Hash(dto.Password);
         var user = new User(dto.Email, hash);
+
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
@@ -34,15 +38,17 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public IActionResult Login(LoginDto dto)
+    public async Task<IActionResult> Login(LoginDto dto)
     {
         var hash = PasswordHasher.Hash(dto.Password);
 
-        var user = _context.Users
-            .FirstOrDefault(u => u.Email == dto.Email && u.PasswordHash == hash);
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u =>
+                u.Email == dto.Email &&
+                u.PasswordHash == hash);
 
         if (user is null)
-            return Unauthorized();
+            return Unauthorized("Invalid credentials");
 
         var claims = new[]
         {
