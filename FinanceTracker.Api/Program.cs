@@ -9,6 +9,10 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---------------- PORT ----------------
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // ---------------- SERVICES ----------------
 
 // Controllers
@@ -18,7 +22,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    // JWT support in Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -28,7 +31,6 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Enter: Bearer {your JWT token}"
     });
-
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -61,7 +63,6 @@ builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -96,19 +97,20 @@ builder.Services.AddCors(options =>
 });
 
 // ---------------- BUILD ----------------
-
 var app = builder.Build();
 
-// Bind to Render/Docker PORT if exists
-var port = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrEmpty(port))
+// Auto-apply migrations on startup
+using (var scope = app.Services.CreateScope())
 {
-    app.Urls.Add($"http://0.0.0.0:{port}");
+    var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+    db.Database.Migrate();
 }
 
 // ---------------- MIDDLEWARE ----------------
+// ⚠️ CORS must be first — before HTTPS redirect and auth
+app.UseCors("AllowAll");
 
-// Swagger with correct server URL
+// Swagger
 app.UseSwagger(c =>
 {
     c.PreSerializeFilters.Add((swagger, httpReq) =>
@@ -119,16 +121,12 @@ app.UseSwagger(c =>
         };
     });
 });
-
 app.UseSwaggerUI();
 
-// Only redirect HTTPS outside development
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-
-app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
