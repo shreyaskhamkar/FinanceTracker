@@ -2,6 +2,7 @@
 using FinanceTracker.Infrastructure.Data;
 using FinanceTracker.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -14,11 +15,8 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ---------------- SERVICES ----------------
-
-// Controllers
 builder.Services.AddControllers();
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -47,7 +45,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Database
 builder.Services.AddDbContext<FinanceDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("Default"),
@@ -61,7 +58,6 @@ builder.Services.AddDbContext<FinanceDbContext>(options =>
 
 builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 
-// JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
 builder.Services.AddAuthentication(options =>
 {
@@ -84,7 +80,6 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -96,21 +91,29 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Trust Render's reverse proxy
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // ---------------- BUILD ----------------
 var app = builder.Build();
 
-// Auto-apply migrations on startup
+// Auto-migrate
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
     db.Database.Migrate();
 }
 
-// ---------------- MIDDLEWARE ----------------
-// ⚠️ CORS must be first — before HTTPS redirect and auth
+// ⚠️ ForwardedHeaders must be FIRST
+app.UseForwardedHeaders();
+
 app.UseCors("AllowAll");
 
-// Swagger
 app.UseSwagger(c =>
 {
     c.PreSerializeFilters.Add((swagger, httpReq) =>
