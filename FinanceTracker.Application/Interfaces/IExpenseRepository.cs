@@ -11,7 +11,7 @@ namespace FinanceTracker.Application.Interfaces
         Task<bool> UpdateAsync(Guid id, string title, decimal amount, DateTime date, ExpenseCategory category);
         Task<bool> DeleteAsync(Guid id);
         Task<List<Expense>> GetByUserIdAsync(Guid userId);
-        Task<List<MonthlySummaryDto>> GetMonthlySummaryAsync();
-        Task<List<CategorySummaryDto>> GetCategorySummaryAsync();
+        Task<List<MonthlySummaryDto>> GetMonthlySummaryAsync(Guid userId);
+        Task<List<CategorySummaryDto>> GetCategorySummaryAsync(Guid userId);
     }
 }

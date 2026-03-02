@@ -67,25 +67,33 @@ namespace FinanceTracker.Infrastructure.Repositories
         }
 
 
-        public async Task<List<MonthlySummaryDto>> GetMonthlySummaryAsync()
+        public async Task<List<MonthlySummaryDto>> GetMonthlySummaryAsync(Guid userId)
         {
-            var data = await _context.Expenses.ToListAsync();
-
-            return data
+            var result = await _context.Expenses
+                .Where(e => e.UserId == userId)
                 .GroupBy(e => new { e.Date.Year, e.Date.Month })
-                .Select(g => new MonthlySummaryDto(
+                .Select(g => new
+                {
                     g.Key.Year,
                     g.Key.Month,
-                    g.Sum(x => x.Amount)
-                ))
+                    TotalAmount = g.Sum(e => e.Amount)
+                })
                 .OrderBy(x => x.Year)
                 .ThenBy(x => x.Month)
+                .ToListAsync();
+
+            return result
+                .Select(x => new MonthlySummaryDto(
+                    x.Year,
+                    x.Month,
+                    x.TotalAmount
+                ))
                 .ToList();
         }
-
-        public async Task<List<CategorySummaryDto>> GetCategorySummaryAsync()
+        public async Task<List<CategorySummaryDto>> GetCategorySummaryAsync(Guid userId)
         {
-            var data = await _context.Expenses
+            var result = await _context.Expenses
+                .Where(e => e.UserId == userId)
                 .GroupBy(e => e.Category)
                 .Select(g => new
                 {
@@ -95,8 +103,7 @@ namespace FinanceTracker.Infrastructure.Repositories
                 .OrderByDescending(x => x.TotalAmount)
                 .ToListAsync();
 
-            // Convert enum to string AFTER SQL execution
-            return data
+            return result
                 .Select(x => new CategorySummaryDto(
                     x.Category.ToString(),
                     x.TotalAmount

@@ -7,7 +7,6 @@
         public decimal Amount { get; private set; }
         public DateTime Date { get; private set; }
         public ExpenseCategory Category { get; private set; }
-
         public Guid UserId { get; private set; }
         private Expense() { } // EF Core
 
