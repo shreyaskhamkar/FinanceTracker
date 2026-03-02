@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FinanceTracker.Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,6 @@ namespace FinanceTracker.Application.DTOs
     string Title,
     decimal Amount,
     DateTime Date,
-    int Category
+    ExpenseCategory Category
 );
 }

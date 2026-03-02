@@ -1,6 +1,7 @@
 ﻿using FinanceTracker.Application.DTOs;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceTracker.Api.Controllers;
@@ -11,6 +12,10 @@ public class ExpensesController : ControllerBase
 {
     private readonly IExpenseRepository _repository;
 
+    private Guid GetUserId()
+    {
+        return Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+    }
     public ExpensesController(IExpenseRepository repository)
     {
         _repository = repository;
@@ -18,29 +23,37 @@ public class ExpensesController : ControllerBase
 
     // -------------------- CREATE --------------------
     [HttpPost]
+    [Authorize]
+
     public async Task<IActionResult> Create(CreateExpenseDto dto)
     {
+        var userId = GetUserId();
+
         var expense = new Expense(
             dto.Title,
             dto.Amount,
-            dto.Date,
-            (ExpenseCategory)dto.Category
+            DateTime.SpecifyKind(dto.Date, DateTimeKind.Utc),
+            dto.Category,
+            userId
         );
 
         await _repository.AddAsync(expense);
-        return CreatedAtAction(nameof(GetById), new { id = expense.Id }, expense);
-    }
 
+        return Ok();
+    }
     // -------------------- READ ALL --------------------
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAll()
     {
-        var expenses = await _repository.GetAllAsync();
+        var userId = GetUserId();
+        var expenses = await _repository.GetByUserIdAsync(userId);
         return Ok(expenses);
     }
-
     // -------------------- READ BY ID --------------------
     [HttpGet("{id:guid}")]
+    [Authorize]
+
     public async Task<IActionResult> GetById(Guid id)
     {
         var expense = await _repository.GetByIdAsync(id);
@@ -52,6 +65,8 @@ public class ExpensesController : ControllerBase
 
     // -------------------- UPDATE --------------------
     [HttpPut("{id:guid}")]
+    [Authorize]
+
     public async Task<IActionResult> Update(Guid id, UpdateExpenseDto dto)
     {
         var updated = await _repository.UpdateAsync(
@@ -70,6 +85,8 @@ public class ExpensesController : ControllerBase
 
     // -------------------- DELETE --------------------
     [HttpDelete("{id:guid}")]
+    [Authorize]
+
     public async Task<IActionResult> Delete(Guid id)
     {
         var deleted = await _repository.DeleteAsync(id);

@@ -8,15 +8,17 @@
         public DateTime Date { get; private set; }
         public ExpenseCategory Category { get; private set; }
 
+        public Guid UserId { get; private set; }
         private Expense() { } // EF Core
 
-        public Expense(string title, decimal amount, DateTime date, ExpenseCategory category)
+        public Expense(string title, decimal amount, DateTime date, ExpenseCategory category, Guid userId)
         {
             Id = Guid.NewGuid();
             Title = title;
             Amount = amount;
-            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+            Date = date;
             Category = category;
+            UserId = userId;
         }
 
         public void Update(string title, decimal amount, DateTime date, ExpenseCategory category)

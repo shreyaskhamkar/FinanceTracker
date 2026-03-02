@@ -103,5 +103,12 @@ namespace FinanceTracker.Infrastructure.Repositories
                 ))
                 .ToList();
         }
+        public async Task<List<Expense>> GetByUserIdAsync(Guid userId)
+        {
+            return await _context.Expenses
+                .Where(e => e.UserId == userId)
+                .OrderByDescending(e => e.Date)
+                .ToListAsync();
+        }
     }
 }
